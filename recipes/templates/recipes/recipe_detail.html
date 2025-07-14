@@ -1,0 +1,129 @@
+{% extends 'recipes/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                {% if recipe.image %}
+                <img src="{{ recipe.image }}" class="card-img-top" alt="{{ recipe.title }}">
+                {% endif %}
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="card-title">{{ recipe.title }}</h2>
+                        {% if user.is_authenticated %}
+                        <button class="btn {% if is_favorite %}btn-primary{% else %}btn-outline-primary{% endif %} toggle-favorite" 
+                                data-recipe-id="{{ recipe.id }}"
+                                data-recipe-title="{{ recipe.title }}"
+                                data-recipe-image="{{ recipe.image }}">
+                            <i class="fas fa-heart"></i> 
+                            {% if is_favorite %}Remove from Favorites{% else %}Add to Favorites{% endif %}
+                        </button>
+                        {% endif %}
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h4>Ready in {{ recipe.readyInMinutes }} minutes</h4>
+                            <p>Servings: {{ recipe.servings }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex">
+                                {% if recipe.vegetarian %}
+                                <span class="badge bg-success me-2">Vegetarian</span>
+                                {% endif %}
+                                {% if recipe.vegan %}
+                                <span class="badge bg-success me-2">Vegan</span>
+                                {% endif %}
+                                {% if recipe.glutenFree %}
+                                <span class="badge bg-info me-2">Gluten Free</span>
+                                {% endif %}
+                                {% if recipe.dairyFree %}
+                                <span class="badge bg-info">Dairy Free</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3>Ingredients</h3>
+                    <ul class="list-group mb-4">
+                        {% for ingredient in recipe.extendedIngredients %}
+                        <li class="list-group-item">
+                            {{ ingredient.amount }} {{ ingredient.unit }} {{ ingredient.name }}
+                            {% if ingredient.original %}
+                            <br><small class="text-muted">{{ ingredient.original }}</small>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+
+                    <h3>Instructions</h3>
+                    {% if recipe.analyzedInstructions %}
+                        {% for instruction_set in recipe.analyzedInstructions %}
+                            <ol class="mb-4">
+                            {% for step in instruction_set.steps %}
+                                <li class="mb-2">{{ step.step }}</li>
+                            {% endfor %}
+                            </ol>
+                        {% endfor %}
+                    {% else %}
+                        <p>{{ recipe.instructions|linebreaks }}</p>
+                    {% endif %}
+
+                    {% if recipe.sourceUrl %}
+                    <div class="mt-4">
+                        <a href="{{ recipe.sourceUrl }}" target="_blank" class="btn btn-outline-secondary">
+                            <i class="fas fa-external-link-alt"></i> View Original Recipe
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('.toggle-favorite').forEach(button => {
+    button.addEventListener('click', function() {
+        const recipeId = this.dataset.recipeId;
+        const recipeTitle = this.dataset.recipeTitle;
+        const recipeImage = this.dataset.recipeImage;
+        
+        fetch('{% url "toggle_favorite" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: `recipe_id=${recipeId}&recipe_title=${encodeURIComponent(recipeTitle)}&recipe_image=${encodeURIComponent(recipeImage)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'added') {
+                this.innerHTML = '<i class="fas fa-heart"></i> Remove from Favorites';
+                this.classList.replace('btn-outline-primary', 'btn-primary');
+            } else {
+                this.innerHTML = '<i class="fas fa-heart"></i> Add to Favorites';
+                this.classList.replace('btn-primary', 'btn-outline-primary');
+            }
+        });
+    });
+});
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

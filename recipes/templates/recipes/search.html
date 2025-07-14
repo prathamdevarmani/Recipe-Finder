@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Recipe Finder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .search-form {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .search-input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .language-select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+        }
+        .search-button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .recipe-card {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .recipe-image {
+            max-width: 200px;
+            border-radius: 4px;
+        }
+        .ingredient-list {
+            margin: 10px 0;
+        }
+        .ingredient-item {
+            margin: 5px 0;
+        }
+        .original-text {
+            color: #2196F3;
+        }
+        .english-text {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .language-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="search-form">
+            <h2>Recipe Finder</h2>
+            <form method="post" id="searchForm" onsubmit="handleSearch(event)">
+                {% csrf_token %}
+                <label class="language-label">Enter Ingredients:</label>
+                <input type="text" name="ingredients" class="search-input" placeholder="Enter ingredients separated by commas" value="{{ ingredients }}">
+                <button type="submit" class="search-button">Search</button>
+            </form>
+        </div>
+
+        {% if recipes %}
+            <div class="recipes-list">
+                {% for recipe in recipes %}
+                    <div class="recipe-card">
+                        <h3>{{ recipe.title }}</h3>
+                        {% if recipe.image %}
+                            <img src="{{ recipe.image }}" alt="{{ recipe.title }}" class="recipe-image">
+                        {% endif %}
+                        
+                        <div class="ingredient-list">
+                            <h4>Your Ingredients:</h4>
+                            {% for ingredient in recipe.original_ingredients %}
+                                <div class="ingredient-item">
+                                    <span class="original-text">{{ ingredient }}</span>
+                                </div>
+                            {% endfor %}
+                            
+                            <h4>Additional Needed Ingredients:</h4>
+                            {% for ingredient in recipe.missedIngredients %}
+                                <div class="ingredient-item">
+                                    <span class="english-text">{{ ingredient.original }}</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+    <script>
+        function handleSearch(event) {
+            // Clear any previous search_submitted hidden input
+            const existingInput = document.querySelector('input[name="search_submitted"]');
+            if (existingInput) {
+                existingInput.remove();
+            }
+            
+            // Add search_submitted input
+            const searchSubmittedInput = document.createElement('input');
+            searchSubmittedInput.type = 'hidden';
+            searchSubmittedInput.name = 'search_submitted';
+            searchSubmittedInput.value = 'true';
+            event.target.appendChild(searchSubmittedInput);
+            
+            // Store current ingredients
+            const currentIngredients = document.querySelector('input[name="ingredients"]').value;
+            localStorage.setItem('lastIngredients', currentIngredients);
+            
+            // Allow form submission to proceed
+            return true;
+        }
+
+
+
+        // Restore ingredients if they exist in localStorage
+        window.onload = function() {
+            const lastIngredients = localStorage.getItem('lastIngredients');
+            if (lastIngredients) {
+                const ingredientsInput = document.querySelector('input[name="ingredients"]');
+                if (ingredientsInput) {
+                    ingredientsInput.value = lastIngredients;
+                }
+            }
+        };
+    </script>
+</body>
+</html>
+
