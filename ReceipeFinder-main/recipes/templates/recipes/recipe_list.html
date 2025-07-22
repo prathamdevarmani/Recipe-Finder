@@ -1,0 +1,186 @@
+{% extends 'recipes/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center mb-5">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <h2 class="text-center mb-4">Find Your Perfect Recipe</h2>
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <div class="form-floating">
+                                    <input type="text" name="ingredients" class="form-control" id="ingredients" 
+                                           placeholder="Enter ingredients" value="{{ ingredients }}" required>
+                                    <label for="ingredients">Enter ingredients (comma separated)</label>
+                                </div>
+                            </div>
+                            <div class="col-12 text-center">
+                                <button type="submit" class="btn btn-primary btn-lg px-5">
+                                    <i class="fas fa-search me-2"></i>Search Recipes
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if recipes %}
+    <div class="row g-4">
+        {% for recipe in recipes %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                {% if recipe.image %}
+                <img src="{{ recipe.image }}" class="card-img-top" alt="{{ recipe.title }}">
+                {% endif %}
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title mb-3">{{ recipe.title }}</h5>
+                    <div class="recipe-info mb-3">
+                        <p class="card-text mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <span class="text-muted">Used ingredients: {{ recipe.usedIngredientCount }}</span>
+                        </p>
+                        <p class="card-text">
+                            <i class="fas fa-times-circle text-danger me-2"></i>
+                            <span class="text-muted">Missing ingredients: {{ recipe.missedIngredientCount }}</span>
+                        </p>
+                    </div>
+                    <div class="mt-auto d-flex justify-content-between align-items-center">
+                        <a href="{% url 'recipe_detail' recipe.id %}" class="btn btn-info">
+                            <i class="fas fa-info-circle me-1"></i> View Details
+                        </a>
+                        <button class="btn {% if recipe.is_favorite %}btn-primary{% else %}btn-outline-primary{% endif %} toggle-favorite" 
+                                data-recipe-id="{{ recipe.id }}"
+                                data-recipe-title="{{ recipe.title }}"
+                                data-recipe-image="{{ recipe.image }}"
+                                data-auth="{{ user.is_authenticated|lower }}">
+                            <i class="fas fa-heart"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+        {% if ingredients %}
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="alert alert-info text-center p-4">
+                    <i class="fas fa-info-circle fa-2x mb-3"></i>
+                    <h4>No recipes found for these ingredients</h4>
+                    <p class="mb-0">Try different ingredients or check your spelling!</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    {% endif %}
+</div>
+
+<script>
+document.querySelectorAll('.toggle-favorite').forEach(button => {
+    button.addEventListener('click', function() {
+        const isAuthenticated = this.dataset.auth === 'true';
+        if (!isAuthenticated) {
+            // Redirect to login page with next parameter
+            const currentPath = window.location.pathname + window.location.search;
+            window.location.href = '/accounts/login/?next=' + encodeURIComponent(currentPath);
+            return;
+        }
+
+        const recipeId = this.dataset.recipeId;
+        const recipeTitle = this.dataset.recipeTitle;
+        const recipeImage = this.dataset.recipeImage;
+        
+        fetch('{% url "toggle_favorite" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: `recipe_id=${recipeId}&recipe_title=${encodeURIComponent(recipeTitle)}&recipe_image=${encodeURIComponent(recipeImage)}`
+        })
+        .then(response => {
+            if (response.status === 403) {
+                // If session expired, redirect to login
+                window.location.href = '/accounts/login/?next=' + encodeURIComponent(window.location.pathname);
+                return;
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data && data.status === 'added') {
+                this.innerHTML = '<i class="fas fa-heart"></i>';
+                this.classList.replace('btn-outline-primary', 'btn-primary');
+            } else if (data && data.status === 'removed') {
+                this.innerHTML = '<i class="fas fa-heart"></i>';
+                this.classList.replace('btn-primary', 'btn-outline-primary');
+            }
+        });
+    });
+});
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+
+<style>
+.form-floating > .form-control,
+.form-floating > .form-select {
+    height: calc(3.5rem + 2px);
+    line-height: 1.25;
+}
+
+.form-floating > label {
+    padding: 1rem 0.75rem;
+}
+
+.card {
+    border: none;
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.recipe-info i {
+    width: 20px;
+}
+
+.alert {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.alert i {
+    display: block;
+    margin-bottom: 1rem;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+}
+
+.btn-lg {
+    padding: 0.8rem 1.5rem;
+}
+</style>
+{% endblock %}

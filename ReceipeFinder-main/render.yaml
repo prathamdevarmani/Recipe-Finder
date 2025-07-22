@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: recipe-finder
+    env: python
+    buildCommand: |
+      pip install -r requirements.txt
+      python manage.py migrate --noinput
+      python manage.py collectstatic --noinput
+    startCommand: "gunicorn recipe_finder.wsgi:application"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.16
+      - key: DJANGO_SETTINGS_MODULE
+        value: recipe_finder.settings
+      - key: SECRET_KEY
+        generateValue: true
+      - key: WEB_CONCURRENCY
+        value: 4
+      - key: DEBUG
+        value: 'False'
+      - key: ALLOWED_HOSTS
+        value: 'recipe-finder.onrender.com,localhost,127.0.0.1'

@@ -1,0 +1,85 @@
+{% extends 'recipes/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">My Favorite Recipes</h2>
+    <div class="row">
+        {% for favorite in favorites %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                {% if favorite.recipe_image %}
+                <img src="{{ favorite.recipe_image }}" class="card-img-top" alt="{{ favorite.recipe_title }}">
+                {% endif %}
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">{{ favorite.recipe_title }}</h5>
+                    <div class="mt-auto">
+                        <a href="{% url 'recipe_detail' favorite.recipe_id %}" class="btn btn-info mb-2 w-100">View Details</a>
+                        <button class="btn btn-danger remove-favorite w-100" data-recipe-id="{{ favorite.recipe_id }}">
+                            <i class="fas fa-trash"></i> Remove from Favorites
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center py-5">
+            <div class="alert alert-info">
+                <h4>You haven't added any favorite recipes yet.</h4>
+                <p class="mb-0">Go to the <a href="{% url 'recipe_list' %}" class="alert-link">recipe search</a> to find and favorite some recipes!</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('.remove-favorite').forEach(button => {
+    button.addEventListener('click', function() {
+        const recipeId = this.dataset.recipeId;
+        fetch('{% url "toggle_favorite" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: `recipe_id=${recipeId}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'removed') {
+                const card = this.closest('.col-md-4');
+                card.style.opacity = '0';
+                setTimeout(() => {
+                    card.remove();
+                    // Check if there are any favorites left
+                    if (document.querySelectorAll('.col-md-4').length === 0) {
+                        location.reload(); // Refresh to show empty state
+                    }
+                }, 300);
+            }
+        });
+    });
+});
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+
+<style>
+.col-md-4 {
+    transition: opacity 0.3s ease-out;
+}
+</style>
+{% endblock %}
